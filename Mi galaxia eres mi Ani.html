@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Ani - Mi Universo Interactivo</title>
+<style>
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; touch-action: none; }
+  canvas { display:block; }
+
+  .player {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 85%;
+    max-width: 450px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 999px;
+    background: rgba(0,0,0,0.7);
+    box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+    color: #fff;
+    backdrop-filter: blur(10px);
+  }
+  .player button { background: transparent; border: none; color: #fff; font-size: 26px; cursor: pointer; outline: none; }
+  .progress { flex-grow: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; cursor: pointer; }
+  .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #8a2be2, #00ced1); border-radius: 3px; }
+  .time { font-size: 11px; min-width: 70px; text-align: right; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="player">
+  <button id="play">▶️</button>
+  <div class="progress" id="progress"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="time" id="time">0:00 / 0:00</div>
+</div>
+
+<audio id="audio" loop>
+  <source src="musica.mp3" type="audio/mpeg">
+</audio>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000);
+const renderer = new THREE.WebGLRenderer({canvas: document.getElementById('c'), antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.minDistance = 150;
+controls.maxDistance = 850;
+
+// Unión de todas tus palabras
+const words = [
+  "🥰 Precioso","🙀 Increíble","☺️ Calma","💘 Especial","🐶 Perro","✨️ Magia","💙 Azul","☕️ Café","🌃 Noche","🌜 Luna","🦋 Mariposa","❤️ Rojo","🧆 Trufas","🌻 Girasol","⛱️ Arena","😾⚫️Blackie","🌅 Amanecer","🏡 Jardín","🐱 Otto","🌞 Sol","❄️ Nieve","💞 Coincidencia","🐈 Shelby","🙌 Sueños","💑 Conexión",
+  "😌 Tranquilidad","🤩 Entusiasmo","☀️ Alegría","🎁 Sorpresas","🫂 Abrazos","🍫 Chocolates","🏠 Familia","❤️ Amor","😊 Sonrisas","🍰 Pastel","🌿 Salud","🛍️ Regalos","💪 Motivación","🍲 Comidas","😂 Risas","🥳 Celebración","📩 Mensajes","🧠 Atención","🕊️ Paz","✨ Felicidad","💓 Emociones","👫 Compañía"
+];
+
+function createTextCanvas(text, isCenter = false) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const size = isCenter ? 80 : 42;
+  ctx.font = `Bold ${size}px Arial`;
+  const w = ctx.measureText(text).width + 50;
+  canvas.width = w; canvas.height = size + 50;
+  ctx.font = `Bold ${size}px Arial`;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = isCenter ? '#8a2be2' : '#00ced1';
+  ctx.shadowBlur = 20;
+  ctx.fillText(text, 25, size + 15);
+  return canvas;
+}
+
+const coreGroup = new THREE.Group();
+scene.add(coreGroup);
+
+const textureLoader = new THREE.TextureLoader();
+const glowMap = textureLoader.load('https://threejs.org/examples/textures/lensflare/lensflare0.png');
+
+[0x8a2be2, 0x4b0082, 0x00ced1].forEach((col, i) => {
+  const m = new THREE.SpriteMaterial({map: glowMap, color: col, transparent:true, blending: THREE.AdditiveBlending, opacity: 0.6});
+  const s = new THREE.Sprite(m);
+  s.scale.set(300 + (i*80), 300 + (i*80), 1);
+  coreGroup.add(s);
+});
+
+const aniMap = new THREE.CanvasTexture(createTextCanvas("Ani", true));
+const aniSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: aniMap }));
+aniSprite.scale.set(aniMap.image.width/2, aniMap.image.height/2, 1);
+coreGroup.add(aniSprite);
+
+const starGeom = new THREE.BufferGeometry();
+const starPos = [];
+for(let i=0; i<4000; i++) starPos.push((Math.random()-0.5)*2200, (Math.random()-0.5)*2200, (Math.random()-0.5)*2200);
+starGeom.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+scene.add(new THREE.Points(starGeom, new THREE.PointsMaterial({color: 0xffffff, size: 0.8})));
+
+const textGroup = new THREE.Group();
+words.forEach((w, i) => {
+  const map = new THREE.CanvasTexture(createTextCanvas(w));
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true }));
+  const phi = Math.acos(-1 + (2 * i) / words.length);
+  const theta = Math.sqrt(words.length * Math.PI) * phi;
+  const rad = 230 + Math.random() * 50;
+  sprite.position.set(rad*Math.cos(theta)*Math.sin(phi), rad*Math.sin(theta)*Math.sin(phi), rad*Math.cos(phi));
+  sprite.scale.set(map.image.width/4, map.image.height/4, 1);
+  textGroup.add(sprite);
+});
+scene.add(textGroup);
+
+camera.position.z = 500;
+
+const audio = document.getElementById('audio');
+const playBtn = document.getElementById('play');
+const progressBar = document.getElementById('progress-bar');
+const progressCont = document.getElementById('progress');
+const timeLabel = document.getElementById('time');
+
+playBtn.onclick = () => {
+  if(audio.paused) { 
+    audio.play().then(()=>playBtn.innerText = "⏸️").catch(e=>alert("No se encontró el archivo 'musica.mp3' en la carpeta.")); 
+  }
+  else { audio.pause(); playBtn.innerText = "▶️"; }
+};
+
+audio.ontimeupdate = () => {
+  if (audio.duration) {
+    const pct = (audio.currentTime / audio.duration) * 100;
+    progressBar.style.width = pct + "%";
+    const cur = Math.floor(audio.currentTime), dur = Math.floor(audio.duration);
+    timeLabel.innerText = `${Math.floor(cur/60)}:${(cur%60).toString().padStart(2,'0')} / ${Math.floor(dur/60)}:${(dur%60).toString().padStart(2,'0')}`;
+  }
+};
+
+progressCont.onclick = (e) => {
+  const rect = progressCont.getBoundingClientRect();
+  audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+};
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  textGroup.rotation.y += 0.0004;
+  const pulse = 1 + Math.sin(Date.now()*0.0015)*0.08;
+  coreGroup.scale.set(pulse, pulse, pulse);
+  renderer.render(scene, camera);
+}
+animate();
+
+window.onresize = () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+};
+</script>
+</body>
+</html>
+
+
